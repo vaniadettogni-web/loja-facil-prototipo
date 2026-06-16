@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Loja Fácil — Protótipo</title>
+<style>
+  :root {
+    --rosa: #E8547A;
+    --rosa-claro: #FDF0F3;
+    --rosa-escuro: #C23060;
+    --cinza-escuro: #1A1A2E;
+    --cinza-medio: #4A4A6A;
+    --cinza-claro: #F5F5FA;
+    --branco: #FFFFFF;
+    --verde: #2ECC71;
+    --amarelo: #F39C12;
+    --fonte: 'Segoe UI', system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { font-family: var(--fonte); background: #f0f0f5; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+
+  /* MODO SELETOR */
+  #modo-selector {
+    width: 100%; max-width: 420px;
+    min-height: 100vh;
+    background: var(--cinza-escuro);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 32px 24px; gap: 24px;
+  }
+  #modo-selector h1 { color: var(--branco); font-size: 22px; font-weight: 700; text-align: center; line-height: 1.4; }
+  #modo-selector p { color: #aaa; font-size: 14px; text-align: center; }
+  .modo-btn {
+    width: 100%; padding: 20px;
+    border: none; border-radius: 16px; cursor: pointer;
+    display: flex; align-items: center; gap: 16px;
+    text-align: left; transition: transform 0.15s;
+  }
+  .modo-btn:active { transform: scale(0.97); }
+  .modo-btn.cliente { background: var(--rosa); }
+  .modo-btn.painel { background: var(--cinza-medio); }
+  .modo-btn .icon { font-size: 32px; }
+  .modo-btn .texto h3 { color: #fff; font-size: 16px; font-weight: 700; }
+  .modo-btn .texto p { color: rgba(255,255,255,0.75); font-size: 13px; margin-top: 2px; }
+  .badge-demo { background: rgba(255,255,255,0.2); color: #fff; font-size: 11px; padding: 3px 8px; border-radius: 20px; display: inline-block; margin-top: 6px; }
+
+  /* TELAS */
+  .tela { display: none; width: 100%; max-width: 420px; min-height: 100vh; flex-direction: column; background: var(--branco); }
+  .tela.ativa { display: flex; }
+
+  /* HEADER */
+  .header {
+    background: var(--rosa);
+    padding: 16px 20px 14px;
+    display: flex; align-items: center; gap: 12px;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .header.escuro { background: var(--cinza-escuro); }
+  .back-btn { background: rgba(255,255,255,0.2); border: none; color: #fff; width: 36px; height: 36px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .header-info h2 { color: #fff; font-size: 16px; font-weight: 700; }
+  .header-info p { color: rgba(255,255,255,0.8); font-size: 12px; }
+  .header-actions { margin-left: auto; display: flex; gap: 8px; }
+
+  /* LOJA DO CLIENTE */
+  .search-bar { padding: 12px 16px; background: var(--rosa-claro); }
+  .search-bar input { width: 100%; padding: 10px 14px; border: 1px solid #e0c0ca; border-radius: 24px; font-size: 14px; outline: none; background: #fff; color: var(--cinza-escuro); }
+  .filtros { display: flex; gap: 8px; padding: 10px 16px; overflow-x: auto; scrollbar-width: none; }
+  .filtros::-webkit-scrollbar { display: none; }
+  .filtro-btn { flex-shrink: 0; padding: 6px 14px; border-radius: 20px; border: 1.5px solid #ddd; background: #fff; font-size: 13px; color: var(--cinza-medio); cursor: pointer; transition: all 0.15s; }
+  .filtro-btn.ativo { background: var(--rosa); border-color: var(--rosa); color: #fff; }
+  .secao-titulo { padding: 14px 16px 8px; font-size: 13px; font-weight: 700; color: var(--cinza-medio); text-transform: uppercase; letter-spacing: 0.5px; }
+  .grid-produtos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 16px 16px; }
+  .card-produto { border-radius: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); cursor: pointer; transition: transform 0.15s; background: #fff; border: 1px solid #f0f0f0; }
+  .card-produto:active { transform: scale(0.97); }
+  .prod-foto { width: 100%; aspect-ratio: 3/4; display: flex; align-items: center; justify-content: center; font-size: 52px; }
+  .prod-foto.rosa { background: #fce4ec; }
+  .prod-foto.lilas { background: #ede7f6; }
+  .prod-foto.menta { background: #e8f5e9; }
+  .prod-foto.peca { background: #fff3e0; }
+  .prod-info { padding: 10px; }
+  .prod-nome { font-size: 13px; font-weight: 600; color: var(--cinza-escuro); line-height: 1.3; }
+  .prod-detalhe { font-size: 12px; color: #999; margin-top: 2px; }
+  .prod-preco { font-size: 15px; font-weight: 700; color: var(--rosa); margin-top: 6px; }
+  .prod-preco-old { font-size: 11px; color: #bbb; text-decoration: line-through; }
+  .tag-novo { background: var(--rosa); color: #fff; font-size: 10px; padding: 2px 7px; border-radius: 10px; display: inline-block; margin-top: 4px; }
+
+  /* DETALHE PRODUTO */
+  #tela-produto .prod-foto-grande { width: 100%; aspect-ratio: 3/4; display: flex; align-items: center; justify-content: center; font-size: 100px; background: #fce4ec; }
+  .prod-detalhe-info { padding: 20px 16px; }
+  .prod-detalhe-nome { font-size: 20px; font-weight: 700; color: var(--cinza-escuro); }
+  .prod-detalhe-preco { font-size: 26px; font-weight: 800; color: var(--rosa); margin-top: 6px; }
+  .prod-detalhe-desc { font-size: 14px; color: var(--cinza-medio); margin-top: 10px; line-height: 1.6; }
+  .tamanhos-label { font-size: 13px; font-weight: 700; color: var(--cinza-escuro); margin-top: 18px; margin-bottom: 8px; }
+  .tamanhos { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tam-btn { width: 42px; height: 42px; border-radius: 10px; border: 2px solid #e0e0e0; background: #fff; font-size: 13px; font-weight: 700; color: var(--cinza-medio); cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+  .tam-btn.selecionado { border-color: var(--rosa); background: var(--rosa); color: #fff; }
+  .tam-btn.indisponivel { opacity: 0.35; cursor: not-allowed; }
+  .btn-comprar { width: 100%; padding: 16px; background: var(--rosa); border: none; border-radius: 14px; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.15s; }
+  .btn-comprar:active { background: var(--rosa-escuro); }
+
+  /* CONFIRMAÇÃO PEDIDO */
+  #tela-confirmacao { background: var(--rosa-claro); }
+  .confirm-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; text-align: center; }
+  .confirm-icon { font-size: 72px; margin-bottom: 16px; }
+  .confirm-titulo { font-size: 22px; font-weight: 800; color: var(--cinza-escuro); }
+  .confirm-sub { font-size: 14px; color: var(--cinza-medio); margin-top: 8px; line-height: 1.6; }
+  .confirm-card { background: #fff; border-radius: 16px; padding: 20px; width: 100%; margin-top: 24px; text-align: left; box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+  .confirm-card h4 { font-size: 13px; color: #999; font-weight: 600; margin-bottom: 10px; }
+  .confirm-row { display: flex; justify-content: space-between; font-size: 14px; color: var(--cinza-escuro); padding: 4px 0; }
+  .confirm-row.total { font-weight: 800; font-size: 16px; border-top: 1px solid #f0f0f0; margin-top: 8px; padding-top: 10px; color: var(--rosa); }
+  .btn-wpp { width: 100%; padding: 16px; background: #25D366; border: none; border-radius: 14px; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn-voltar-loja { width: 100%; padding: 14px; background: transparent; border: 2px solid var(--rosa); border-radius: 14px; color: var(--rosa); font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 10px; }
+
+  /* PAINEL DONA */
+  .painel-tabs { display: flex; background: #fff; border-bottom: 1px solid #f0f0f0; }
+  .tab-btn { flex: 1; padding: 13px 8px; border: none; background: transparent; font-size: 13px; font-weight: 600; color: #999; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.15s; }
+  .tab-btn.ativo { color: var(--rosa); border-bottom-color: var(--rosa); }
+  .tab-content { display: none; flex: 1; overflow-y: auto; }
+  .tab-content.ativo { display: block; }
+
+  /* RESUMO DO DIA */
+  .resumo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px; }
+  .resumo-card { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .resumo-card .r-label { font-size: 12px; color: #999; font-weight: 600; }
+  .resumo-card .r-valor { font-size: 22px; font-weight: 800; color: var(--cinza-escuro); margin-top: 4px; }
+  .resumo-card .r-valor.verde { color: var(--verde); }
+  .resumo-card .r-valor.rosa { color: var(--rosa); }
+  .resumo-card .r-sub { font-size: 12px; color: #bbb; margin-top: 2px; }
+
+  /* PEDIDOS */
+  .pedidos-lista { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .pedido-card { background: #fff; border-radius: 14px; padding: 14px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid #ddd; cursor: pointer; transition: transform 0.15s; }
+  .pedido-card:active { transform: scale(0.98); }
+  .pedido-card.novo { border-left-color: var(--rosa); }
+  .pedido-card.separando { border-left-color: var(--amarelo); }
+  .pedido-card.enviado { border-left-color: var(--verde); }
+  .pedido-header { display: flex; justify-content: space-between; align-items: flex-start; }
+  .pedido-num { font-size: 13px; font-weight: 800; color: var(--cinza-escuro); }
+  .pedido-status { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+  .pedido-status.novo { background: #fde8ee; color: var(--rosa); }
+  .pedido-status.separando { background: #fff3e0; color: var(--amarelo); }
+  .pedido-status.enviado { background: #e8f5e9; color: var(--verde); }
+  .pedido-cliente { font-size: 14px; color: var(--cinza-escuro); margin-top: 6px; font-weight: 600; }
+  .pedido-itens { font-size: 13px; color: #999; margin-top: 2px; }
+  .pedido-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+  .pedido-valor { font-size: 15px; font-weight: 800; color: var(--rosa); }
+  .pedido-hora { font-size: 12px; color: #bbb; }
+  .btn-acao { padding: 8px 16px; border-radius: 20px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn-acao.rosa { background: var(--rosa); color: #fff; }
+  .btn-acao.verde { background: var(--verde); color: #fff; }
+
+  /* ESTOQUE */
+  .estoque-lista { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .estoque-item { background: #fff; border-radius: 12px; padding: 14px; display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
+  .estoque-emoji { font-size: 28px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: var(--cinza-claro); border-radius: 10px; flex-shrink: 0; }
+  .estoque-info { flex: 1; }
+  .estoque-nome { font-size: 14px; font-weight: 700; color: var(--cinza-escuro); }
+  .estoque-detalhe { font-size: 12px; color: #999; margin-top: 2px; }
+  .estoque-qtd { font-size: 18px; font-weight: 800; }
+  .estoque-qtd.ok { color: var(--verde); }
+  .estoque-qtd.baixo { color: var(--amarelo); }
+  .estoque-qtd.zero { color: var(--rosa); }
+  .alerta-estoque { margin: 12px 16px; background: #fff3e0; border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+  .alerta-estoque span { font-size: 13px; color: #e67e22; font-weight: 600; }
+
+  /* NOTIFICAÇÃO */
+  .notif-badge { background: var(--rosa); color: #fff; border-radius: 50%; width: 18px; height: 18px; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; margin-left: 4px; }
+
+  /* BOTTOM NAV */
+  .bottom-nav { background: #fff; border-top: 1px solid #f0f0f0; display: flex; padding: 8px 0 max(8px, env(safe-area-inset-bottom)); position: sticky; bottom: 0; }
+  .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px; border: none; background: transparent; cursor: pointer; color: #bbb; font-size: 11px; font-weight: 600; transition: color 0.15s; }
+  .nav-btn.ativo { color: var(--rosa); }
+  .nav-btn .nav-icon { font-size: 22px; }
+
+  /* MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: flex-end; justify-content: center; }
+  .modal-overlay.aberto { display: flex; }
+  .modal { background: #fff; border-radius: 24px 24px 0 0; padding: 24px 20px 32px; width: 100%; max-width: 420px; }
+  .modal-handle { width: 40px; height: 4px; background: #e0e0e0; border-radius: 2px; margin: 0 auto 20px; }
+  .modal h3 { font-size: 18px; font-weight: 800; color: var(--cinza-escuro); margin-bottom: 16px; }
+  .modal-row { display: flex; justify-content: space-between; font-size: 14px; color: var(--cinza-escuro); padding: 8px 0; border-bottom: 1px solid #f5f5f5; }
+  .modal-row:last-of-type { border: none; }
+  .modal-acoes { display: flex; gap: 10px; margin-top: 16px; }
+  .modal-acoes button { flex: 1; padding: 14px; border-radius: 12px; border: none; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .btn-separar { background: var(--amarelo); color: #fff; }
+  .btn-enviado { background: var(--verde); color: #fff; }
+</style>
+</head>
+<body>
+
+<!-- SELETOR DE MODO -->
+<div id="modo-selector">
+  <div style="font-size: 40px; margin-bottom: 4px;">👗</div>
+  <h1>Loja Fácil</h1>
+  <p>Escolha qual tela você quer ver</p>
+
+  <button class="modo-btn cliente" onclick="abrirTela('tela-loja')">
+    <div class="icon">🛍️</div>
+    <div class="texto">
+      <h3>Loja da cliente</h3>
+      <p>O que sua cliente vê quando acessa</p>
+      <span class="badge-demo">DEMO — Boutique Estilo</span>
+    </div>
+  </button>
+
+  <button class="modo-btn painel" onclick="abrirTela('tela-painel')">
+    <div class="icon">📊</div>
+    <div class="texto">
+      <h3>Painel da dona</h3>
+      <p>Pedidos, estoque e resumo do dia</p>
+      <span class="badge-demo">DEMO — Área administrativa</span>
+    </div>
+  </button>
+
+  <p style="font-size: 11px; color: #666; margin-top: 8px;">Este é um protótipo de demonstração</p>
+</div>
+
+<!-- TELA LOJA (CLIENTE) -->
+<div class="tela" id="tela-loja">
+  <div class="header">
+    <button class="back-btn" onclick="voltarInicio()">←</button>
+    <div class="header-info">
+      <h2>Boutique Estilo ✨</h2>
+      <p>Aracruz, ES · Frete grátis acima de R$ 150</p>
+    </div>
+  </div>
+
+  <div class="search-bar">
+    <input type="text" placeholder="Buscar peças...">
+  </div>
+
+  <div class="filtros">
+    <button class="filtro-btn ativo">Todos</button>
+    <button class="filtro-btn">Blusas</button>
+    <button class="filtro-btn">Calças</button>
+    <button class="filtro-btn">Vestidos</button>
+    <button class="filtro-btn">Promoção</button>
+  </div>
+
+  <div class="secao-titulo">Novidades 🔥</div>
+
+  <div class="grid-produtos">
+    <div class="card-produto" onclick="abrirProduto('p1')">
+      <div class="prod-foto rosa">👗</div>
+      <div class="prod-info">
+        <div class="prod-nome">Vestido Floral Midi</div>
+        <div class="prod-detalhe">P · M · G</div>
+        <div class="prod-preco">R$ 129,90</div>
+        <span class="tag-novo">NOVO</span>
+      </div>
+    </div>
+    <div class="card-produto" onclick="abrirProduto('p2')">
+      <div class="prod-foto lilas">👚</div>
+      <div class="prod-info">
+        <div class="prod-nome">Blusa Cropped Lilás</div>
+        <div class="prod-detalhe">PP · P · M</div>
+        <div class="prod-preco-old">R$ 79,90</div>
+        <div class="prod-preco">R$ 59,90</div>
+      </div>
+    </div>
+    <div class="card-produto" onclick="abrirProduto('p3')">
+      <div class="prod-foto menta">👖</div>
+      <div class="prod-info">
+        <div class="prod-nome">Calça Linho Verde</div>
+        <div class="prod-detalhe">P · M · G · GG</div>
+        <div class="prod-preco">R$ 149,90</div>
+      </div>
+    </div>
+    <div class="card-produto" onclick="abrirProduto('p4')">
+      <div class="prod-foto peca">🧥</div>
+      <div class="prod-info">
+        <div class="prod-nome">Blazer Caramelo</div>
+        <div class="prod-detalhe">P · M · G</div>
+        <div class="prod-preco-old">R$ 229,90</div>
+        <div class="prod-preco">R$ 189,90</div>
+        <span class="tag-novo" style="background:#F39C12">OFERTA</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TELA DETALHE PRODUTO -->
+<div class="tela" id="tela-produto">
+  <div class="header">
+    <button class="back-btn" onclick="abrirTela('tela-loja')">←</button>
+    <div class="header-info">
+      <h2 id="prod-header-nome">Produto</h2>
+    </div>
+  </div>
+  <div style="overflow-y: auto; flex: 1;">
+    <div class="prod-foto-grande" id="prod-emoji">👗</div>
+    <div class="prod-detalhe-info">
+      <div class="prod-detalhe-nome" id="prod-nome-det"></div>
+      <div class="prod-detalhe-preco" id="prod-preco-det"></div>
+      <div class="prod-detalhe-desc" id="prod-desc-det"></div>
+      <div class="tamanhos-label">Selecione o tamanho:</div>
+      <div class="tamanhos" id="tamanhos-container"></div>
+      <button class="btn-comprar" onclick="comprar()">
+        🛒 Fazer pedido pelo WhatsApp
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TELA CONFIRMAÇÃO -->
+<div class="tela" id="tela-confirmacao">
+  <div class="header">
+    <button class="back-btn" onclick="abrirTela('tela-loja')">←</button>
+    <div class="header-info"><h2>Pedido enviado!</h2></div>
+  </div>
+  <div class="confirm-body">
+    <div class="confirm-icon">🎉</div>
+    <div class="confirm-titulo">Pedido recebido!</div>
+    <div class="confirm-sub">A loja já foi notificada e vai confirmar pelo WhatsApp em breve.</div>
+    <div class="confirm-card">
+      <h4>RESUMO DO PEDIDO</h4>
+      <div class="confirm-row"><span>Produto</span><span id="conf-prod"></span></div>
+      <div class="confirm-row"><span>Tamanho</span><span id="conf-tam"></span></div>
+      <div class="confirm-row"><span>Entrega</span><span>Aracruz, ES</span></div>
+      <div class="confirm-row total"><span>Total</span><span id="conf-valor"></span></div>
+    </div>
+    <button class="btn-wpp">💬 Acompanhar pelo WhatsApp</button>
+    <button class="btn-voltar-loja" onclick="abrirTela('tela-loja')">Continuar comprando</button>
+  </div>
+</div>
+
+<!-- TELA PAINEL DONA -->
+<div class="tela" id="tela-painel">
+  <div class="header escuro">
+    <button class="back-btn" onclick="voltarInicio()">←</button>
+    <div class="header-info">
+      <h2>Boutique Estilo</h2>
+      <p>Hoje, 15 de junho · Olá, Vaninha! 👋</p>
+    </div>
+  </div>
+
+  <div class="painel-tabs">
+    <button class="tab-btn ativo" onclick="abrirTab('tab-resumo', this)">Hoje</button>
+    <button class="tab-btn" onclick="abrirTab('tab-pedidos', this)">Pedidos <span class="notif-badge">3</span></button>
+    <button class="tab-btn" onclick="abrirTab('tab-estoque', this)">Estoque</button>
+  </div>
+
+  <!-- TAB RESUMO -->
+  <div class="tab-content ativo" id="tab-resumo">
+    <div class="resumo-grid">
+      <div class="resumo-card">
+        <div class="r-label">💰 Vendas hoje</div>
+        <div class="r-valor verde">R$ 487</div>
+        <div class="r-sub">5 pedidos</div>
+      </div>
+      <div class="resumo-card">
+        <div class="r-label">📦 A separar</div>
+        <div class="r-valor rosa">3</div>
+        <div class="r-sub">pedidos novos</div>
+      </div>
+      <div class="resumo-card">
+        <div class="r-label">🚚 Enviados</div>
+        <div class="r-valor" style="color:#3498db">2</div>
+        <div class="r-sub">hoje</div>
+      </div>
+      <div class="resumo-card">
+        <div class="r-label">📈 Mês atual</div>
+        <div class="r-valor verde">R$ 6.240</div>
+        <div class="r-sub">+18% vs mês ant.</div>
+      </div>
+    </div>
+    <div class="secao-titulo">Mais vendidos esta semana</div>
+    <div class="estoque-lista">
+      <div class="estoque-item">
+        <div class="estoque-emoji">👗</div>
+        <div class="estoque-info"><div class="estoque-nome">Vestido Floral Midi</div><div class="estoque-detalhe">8 vendas</div></div>
+        <div class="estoque-qtd ok">🏆</div>
+      </div>
+      <div class="estoque-item">
+        <div class="estoque-emoji">👖</div>
+        <div class="estoque-info"><div class="estoque-nome">Calça Linho Verde</div><div class="estoque-detalhe">5 vendas</div></div>
+        <div class="estoque-qtd ok">🥈</div>
+      </div>
+      <div class="estoque-item">
+        <div class="estoque-emoji">🧥</div>
+        <div class="estoque-info"><div class="estoque-nome">Blazer Caramelo</div><div class="estoque-detalhe">4 vendas</div></div>
+        <div class="estoque-qtd ok">🥉</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB PEDIDOS -->
+  <div class="tab-content" id="tab-pedidos">
+    <div class="pedidos-lista">
+      <div class="pedido-card novo" onclick="abrirPedido('p001')">
+        <div class="pedido-header">
+          <div class="pedido-num">#001 · 14:32</div>
+          <span class="pedido-status novo">Novo pedido</span>
+        </div>
+        <div class="pedido-cliente">Ana Paula Souza</div>
+        <div class="pedido-itens">Vestido Floral Midi · Tam. M</div>
+        <div class="pedido-footer">
+          <div class="pedido-valor">R$ 129,90</div>
+          <button class="btn-acao rosa" onclick="event.stopPropagation(); abrirPedido('p001')">Ver pedido</button>
+        </div>
+      </div>
+      <div class="pedido-card novo" onclick="abrirPedido('p002')">
+        <div class="pedido-header">
+          <div class="pedido-num">#002 · 13:15</div>
+          <span class="pedido-status novo">Novo pedido</span>
+        </div>
+        <div class="pedido-cliente">Fernanda Lima</div>
+        <div class="pedido-itens">Blazer Caramelo · Tam. P</div>
+        <div class="pedido-footer">
+          <div class="pedido-valor">R$ 189,90</div>
+          <button class="btn-acao rosa" onclick="event.stopPropagation(); abrirPedido('p002')">Ver pedido</button>
+        </div>
+      </div>
+      <div class="pedido-card novo" onclick="abrirPedido('p003')">
+        <div class="pedido-header">
+          <div class="pedido-num">#003 · 11:48</div>
+          <span class="pedido-status novo">Novo pedido</span>
+        </div>
+        <div class="pedido-cliente">Juliana Martins</div>
+        <div class="pedido-itens">Blusa Cropped Lilás · Tam. PP + Calça Linho Verde · Tam. M</div>
+        <div class="pedido-footer">
+          <div class="pedido-valor">R$ 209,80</div>
+          <button class="btn-acao rosa" onclick="event.stopPropagation(); abrirPedido('p003')">Ver pedido</button>
+        </div>
+      </div>
+      <div class="pedido-card separando">
+        <div class="pedido-header">
+          <div class="pedido-num">#004 · 10:20</div>
+          <span class="pedido-status separando">Separando</span>
+        </div>
+        <div class="pedido-cliente">Carla Mendes</div>
+        <div class="pedido-itens">Vestido Floral Midi · Tam. G</div>
+        <div class="pedido-footer">
+          <div class="pedido-valor">R$ 129,90</div>
+          <button class="btn-acao verde">Marcar enviado</button>
+        </div>
+      </div>
+      <div class="pedido-card enviado">
+        <div class="pedido-header">
+          <div class="pedido-num">#005 · 09:05</div>
+          <span class="pedido-status enviado">Enviado ✓</span>
+        </div>
+        <div class="pedido-cliente">Marina Costa</div>
+        <div class="pedido-itens">Calça Linho Verde · Tam. P</div>
+        <div class="pedido-footer">
+          <div class="pedido-valor">R$ 149,90</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB ESTOQUE -->
+  <div class="tab-content" id="tab-estoque">
+    <div class="alerta-estoque">
+      ⚠️ <span>Blusa Cropped Lilás (PP) com apenas 1 unidade!</span>
+    </div>
+    <div class="estoque-lista">
+      <div class="estoque-item">
+        <div class="estoque-emoji">👗</div>
+        <div class="estoque-info"><div class="estoque-nome">Vestido Floral Midi</div><div class="estoque-detalhe">P: 3 · M: 2 · G: 4</div></div>
+        <div class="estoque-qtd ok">9</div>
+      </div>
+      <div class="estoque-item">
+        <div class="estoque-emoji">👚</div>
+        <div class="estoque-info"><div class="estoque-nome">Blusa Cropped Lilás</div><div class="estoque-detalhe">PP: 1 · P: 3 · M: 5</div></div>
+        <div class="estoque-qtd baixo">9</div>
+      </div>
+      <div class="estoque-item">
+        <div class="estoque-emoji">👖</div>
+        <div class="estoque-info"><div class="estoque-nome">Calça Linho Verde</div><div class="estoque-detalhe">P: 2 · M: 4 · G: 3 · GG: 2</div></div>
+        <div class="estoque-qtd ok">11</div>
+      </div>
+      <div class="estoque-item">
+        <div class="estoque-emoji">🧥</div>
+        <div class="estoque-info"><div class="estoque-nome">Blazer Caramelo</div><div class="estoque-detalhe">P: 0 · M: 2 · G: 1</div></div>
+        <div class="estoque-qtd baixo">3</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-btn ativo" onclick="abrirTab('tab-resumo', null, true)">
+      <span class="nav-icon">🏠</span> Início
+    </button>
+    <button class="nav-btn" onclick="abrirTab('tab-pedidos', null, true)">
+      <span class="nav-icon">📦</span> Pedidos
+    </button>
+    <button class="nav-btn" onclick="abrirTab('tab-estoque', null, true)">
+      <span class="nav-icon">👗</span> Estoque
+    </button>
+  </div>
+</div>
+
+<!-- MODAL PEDIDO -->
+<div class="modal-overlay" id="modal-pedido">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 id="modal-titulo">Pedido #001</h3>
+    <div id="modal-conteudo"></div>
+    <div class="modal-acoes">
+      <button class="btn-separar" onclick="fecharModal()">📋 Separar agora</button>
+      <button class="btn-enviado" onclick="fecharModal()">🚚 Marcar enviado</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const produtos = {
+  p1: { nome: 'Vestido Floral Midi', emoji: '👗', preco: 'R$ 129,90', desc: 'Vestido midi com estampa floral delicada, tecido leve e fluido. Ideal para o dia a dia ou ocasiões especiais.', tamanhos: ['P', 'M', 'G'], bg: 'rosa' },
+  p2: { nome: 'Blusa Cropped Lilás', emoji: '👚', preco: 'R$ 59,90', desc: 'Blusa cropped com acabamento premium. Combina com calças, saias e shorts. Disponível em lilás exclusivo.', tamanhos: ['PP', 'P', 'M'], bg: 'lilas' },
+  p3: { nome: 'Calça Linho Verde', emoji: '👖', preco: 'R$ 149,90', desc: 'Calça de linho com corte reto e confortável. Peça versátil para looks casuais e modernos.', tamanhos: ['P', 'M', 'G', 'GG'], bg: 'menta' },
+  p4: { nome: 'Blazer Caramelo', emoji: '🧥', preco: 'R$ 189,90', desc: 'Blazer estruturado na cor caramelo, tendência da estação. Eleva qualquer look instantaneamente.', tamanhos: ['P', 'M', 'G'], bg: 'peca' },
+};
+
+const pedidos = {
+  p001: { num: '#001', cliente: 'Ana Paula Souza', item: 'Vestido Floral Midi', tam: 'M', valor: 'R$ 129,90', hora: '14:32', end: 'Rua das Flores, 123 — Aracruz' },
+  p002: { num: '#002', cliente: 'Fernanda Lima', item: 'Blazer Caramelo', tam: 'P', valor: 'R$ 189,90', hora: '13:15', end: 'Av. Central, 456 — Aracruz' },
+  p003: { num: '#003', cliente: 'Juliana Martins', item: 'Blusa Cropped + Calça Linho', tam: 'PP / M', valor: 'R$ 209,80', hora: '11:48', end: 'Rua do Comércio, 89 — Aracruz' },
+};
+
+let produtoAtual = null;
+let tamanhoSelecionado = null;
+
+function abrirTela(id) {
+  document.querySelectorAll('.tela, #modo-selector').forEach(t => { t.style.display = 'none'; if(t.classList) t.classList.remove('ativa'); });
+  const el = document.getElementById(id);
+  el.style.display = 'flex';
+  el.classList.add('ativa');
+  window.scrollTo(0, 0);
+}
+
+function voltarInicio() {
+  document.querySelectorAll('.tela').forEach(t => { t.style.display = 'none'; t.classList.remove('ativa'); });
+  document.getElementById('modo-selector').style.display = 'flex';
+}
+
+function abrirProduto(id) {
+  produtoAtual = produtos[id];
+  tamanhoSelecionado = null;
+  document.getElementById('prod-header-nome').textContent = produtoAtual.nome;
+  document.getElementById('prod-emoji').textContent = produtoAtual.emoji;
+  document.getElementById('prod-emoji').className = 'prod-foto-grande ' + produtoAtual.bg;
+  document.getElementById('prod-nome-det').textContent = produtoAtual.nome;
+  document.getElementById('prod-preco-det').textContent = produtoAtual.preco;
+  document.getElementById('prod-desc-det').textContent = produtoAtual.desc;
+  const cont = document.getElementById('tamanhos-container');
+  cont.innerHTML = '';
+  produtoAtual.tamanhos.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'tam-btn';
+    btn.textContent = t;
+    btn.onclick = () => {
+      document.querySelectorAll('.tam-btn').forEach(b => b.classList.remove('selecionado'));
+      btn.classList.add('selecionado');
+      tamanhoSelecionado = t;
+    };
+    cont.appendChild(btn);
+  });
+  abrirTela('tela-produto');
+}
+
+function comprar() {
+  if (!tamanhoSelecionado) {
+    alert('Selecione um tamanho!');
+    return;
+  }
+  document.getElementById('conf-prod').textContent = produtoAtual.nome;
+  document.getElementById('conf-tam').textContent = tamanhoSelecionado;
+  document.getElementById('conf-valor').textContent = produtoAtual.preco;
+  abrirTela('tela-confirmacao');
+}
+
+function abrirTab(id, btn, fromNav) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('ativo'));
+  document.getElementById(id).classList.add('ativo');
+  if (btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('ativo'));
+    btn.classList.add('ativo');
+  }
+  if (fromNav) {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('ativo'));
+    const map = { 'tab-resumo': 0, 'tab-pedidos': 1, 'tab-estoque': 2 };
+    document.querySelectorAll('.nav-btn')[map[id]]?.classList.add('ativo');
+    document.querySelectorAll('.tab-btn')[map[id]]?.classList.add('ativo');
+    document.querySelectorAll('.tab-btn').forEach((b, i) => { if (i !== map[id]) b.classList.remove('ativo'); });
+  }
+}
+
+function abrirPedido(id) {
+  const p = pedidos[id];
+  document.getElementById('modal-titulo').textContent = 'Pedido ' + p.num;
+  document.getElementById('modal-conteudo').innerHTML = `
+    <div class="modal-row"><span>Cliente</span><strong>${p.cliente}</strong></div>
+    <div class="modal-row"><span>Produto</span><span>${p.item}</span></div>
+    <div class="modal-row"><span>Tamanho</span><span>${p.tam}</span></div>
+    <div class="modal-row"><span>Endereço</span><span>${p.end}</span></div>
+    <div class="modal-row"><span>Horário</span><span>${p.hora}</span></div>
+    <div class="modal-row" style="font-weight:800;color:#E8547A"><span>Total</span><span>${p.valor}</span></div>
+  `;
+  document.getElementById('modal-pedido').classList.add('aberto');
+}
+
+function fecharModal() {
+  document.getElementById('modal-pedido').classList.remove('aberto');
+}
+
+document.getElementById('modal-pedido').addEventListener('click', function(e) {
+  if (e.target === this) fecharModal();
+});
+
+// Inicia na tela de seleção
+document.getElementById('modo-selector').style.display = 'flex';
+</script>
+</body>
+</html>
