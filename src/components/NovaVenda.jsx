@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
 import { supabase } from '../lib/supabaseClient'
+import SeletorCliente from './SeletorCliente'
 
 export default function NovaVenda({ lojaId, produtos, onVendaFinalizada, onFechar }) {
   const [escaneando, setEscaneando] = useState(false)
@@ -11,6 +12,16 @@ export default function NovaVenda({ lojaId, produtos, onVendaFinalizada, onFecha
   const [codigoManual, setCodigoManual] = useState('')
   const leitorRef = useRef(null)
   const containerId = 'leitor-camera'
+
+  const [formaPagamento, setFormaPagamento] = useState('a_vista')
+  const [clienteSelecionado, setClienteSelecionado] = useState(null)
+  const [tipoCredito, setTipoCredito] = useState('fiado') // 'fiado' | 'parcelado'
+  const [numParcelas, setNumParcelas] = useState(2)
+  const [dataPrimeiraParcela, setDataPrimeiraParcela] = useState(() => {
+    const hoje = new Date()
+    hoje.setDate(hoje.getDate() + 30)
+    return hoje.toISOString().slice(0, 10)
+  })
 
   useEffect(() => {
     return () => {
@@ -28,13 +39,8 @@ export default function NovaVenda({ lojaId, produtos, onVendaFinalizada, onFecha
     const itemExistente = carrinho.find(
       (i) => i.produto.id === produto.id && i.variacao?.id === variacao?.id
     )
-
     if (itemExistente) {
-      setCarrinho(
-        carrinho.map((i) =>
-          i === itemExistente ? { ...i, quantidade: i.quantidade + 1 } : i
-        )
-      )
+      setCarrinho(carrinho.map((i) => (i === itemExistente ? { ...i, quantidade: i.quantidade + 1 } : i)))
     } else {
       setCarrinho([...carrinho, { produto, variacao, quantidade: 1 }])
     }
@@ -48,15 +54,8 @@ export default function NovaVenda({ lojaId, produtos, onVendaFinalizada, onFecha
       return
     }
     setErro('')
-
     const variacoes = produto.produto_variacoes || []
-    if (variacoes.length === 1) {
-      adicionarAoCarrinho(produto, variacoes[0])
-    } else if (variacoes.length === 0) {
-      adicionarAoCarrinho(produto, null)
-    } else {
-      adicionarAoCarrinho(produto, variacoes[0])
-    }
+    adicionarAoCarrinho(produto, variacoes.length > 0 ? variacoes[0] : null)
   }
 
   async function iniciarCamera() {
@@ -69,9 +68,7 @@ export default function NovaVenda({ lojaId, produtos, onVendaFinalizada, onFecha
         await leitor.start(
           { facingMode: 'environment' },
           { fps: 10, qrbox: { width: 250, height: 150 } },
-          (textoLido) => {
-            processarCodigoLido(textoLido)
-          },
+          (textoLido) => processarCodigoLido(textoLido),
           () => {}
         )
       } catch (err) {
@@ -83,9 +80,7 @@ export default function NovaVenda({ lojaId, produtos, onVendaFinalizada, onFecha
 
   async function pararCamera() {
     if (leitorRef.current) {
-      try {
-        await leitorRef.current.stop()
-      } catch {}
+      try { await leitorRef.current.stop() } catch {}
     }
     setEscaneando(false)
   }
@@ -98,11 +93,7 @@ export default function NovaVenda({ lojaId, produtos, onVendaFinalizada, onFecha
   }
 
   function alterarQuantidade(index, delta) {
-    setCarrinho(
-      carrinho.map((item, i) =>
-        i === index ? { ...item, quantidade: Math.max(1, item.quantidade + delta) } : item
-      )
-    )
+    setCarrinho(carrinho.map((item, i) => (i === index ? { ...item, quantidade: Math.max(1, item.quantidade + delta) } : item)))
   }
 
   function removerDoCarrinho(index) {
@@ -110,9 +101,15 @@ export default function NovaVenda({ lojaId, produtos, onVendaFinalizada, onFecha
   }
 
   const total = carrinho.reduce((soma, item) => soma + item.produto.preco * item.quantidade, 0)
+  const valorParcela = tipoCredito === 'fiado' ? total : total / numParcelas
 
   async function finalizarVenda() {
     if (carrinho.length === 0) return
+    if (formaPagamento === 'crediario' && !clienteSelecionado) {
+      setErro('Selecione ou cadastre um cliente para venda no crediário.')
+      return
+    }
+
     setFinalizando(true)
     setErro('')
 
@@ -124,13 +121,23 @@ export default function NovaVenda({ lojaId, produtos, onVendaFinalizada, onFecha
         preco_unitario: item.produto.preco,
       }))
 
-      const { error } = await supabase.rpc('finalizar_venda', {
-        p_loja_id: lojaId,
-        p_forma_pagamento: 'a_vista',
-        p_itens: itens,
-      })
-
-      if (error) throw error
+      if (formaPagamento === 'a_vista') {
+        const { error } = await supabase.rpc('finalizar_venda', {
+          p_loja_id: lojaId,
+          p_forma_pagamento: 'a_vista',
+          p_itens: itens,
+        })
+        if (error) throw error
+      } else {
+        const { error } = await supabase.rpc('finalizar_venda_crediario', {
+          p_loja_id: lojaId,
+          p_cliente_id: clienteSelecionado.id,
+          p_itens: itens,
+          p_num_parcelas: tipoCredito === 'fiado' ? 1 : numParcelas,
+          p_data_primeira_parcela: dataPrimeiraParcela,
+        })
+        if (error) throw error
+      }
 
       setCarrinho([])
       onVendaFinalizada?.()
@@ -185,9 +192,7 @@ export default function NovaVenda({ lojaId, produtos, onVendaFinalizada, onFecha
               <button onClick={() => alterarQuantidade(index, -1)} style={estiloBotaoQtd}>−</button>
               <span>{item.quantidade}</span>
               <button onClick={() => alterarQuantidade(index, 1)} style={estiloBotaoQtd}>+</button>
-              <span style={{ color: 'var(--cor-dourado)', minWidth: 70, textAlign: 'right' }}>
-                R$ {(item.produto.preco * item.quantidade).toFixed(2)}
-              </span>
+              <span style={{ color: 'var(--cor-dourado)', minWidth: 70, textAlign: 'right' }}>R$ {(item.produto.preco * item.quantidade).toFixed(2)}</span>
               <button onClick={() => removerDoCarrinho(index)} style={{ background: 'transparent', border: 'none', color: 'var(--cor-erro)', cursor: 'pointer' }}>×</button>
             </div>
           </div>
@@ -196,16 +201,78 @@ export default function NovaVenda({ lojaId, produtos, onVendaFinalizada, onFecha
 
       {carrinho.length > 0 && (
         <>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => setFormaPagamento('a_vista')}
+              style={{ flex: 1, padding: '8px', borderRadius: 'var(--raio)', cursor: 'pointer', border: formaPagamento === 'a_vista' ? '1px solid var(--cor-dourado)' : '1px solid var(--cor-borda)', background: formaPagamento === 'a_vista' ? 'var(--cor-dourado-suave)' : 'transparent', color: 'var(--cor-texto)' }}
+            >
+              À vista
+            </button>
+            <button
+              onClick={() => setFormaPagamento('crediario')}
+              style={{ flex: 1, padding: '8px', borderRadius: 'var(--raio)', cursor: 'pointer', border: formaPagamento === 'crediario' ? '1px solid var(--cor-dourado)' : '1px solid var(--cor-borda)', background: formaPagamento === 'crediario' ? 'var(--cor-dourado-suave)' : 'transparent', color: 'var(--cor-texto)' }}
+            >
+              Crediário
+            </button>
+          </div>
+
+          {formaPagamento === 'crediario' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--cor-fundo)', padding: 12, borderRadius: 'var(--raio)' }}>
+              <SeletorCliente lojaId={lojaId} clienteSelecionado={clienteSelecionado} onSelecionar={setClienteSelecionado} />
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => setTipoCredito('fiado')}
+                  style={{ flex: 1, padding: '6px', borderRadius: 'var(--raio)', cursor: 'pointer', border: tipoCredito === 'fiado' ? '1px solid var(--cor-dourado)' : '1px solid var(--cor-borda)', background: 'transparent', color: 'var(--cor-texto)', fontSize: '0.85rem' }}
+                >
+                  Fiado (1x)
+                </button>
+                <button
+                  onClick={() => setTipoCredito('parcelado')}
+                  style={{ flex: 1, padding: '6px', borderRadius: 'var(--raio)', cursor: 'pointer', border: tipoCredito === 'parcelado' ? '1px solid var(--cor-dourado)' : '1px solid var(--cor-borda)', background: 'transparent', color: 'var(--cor-texto)', fontSize: '0.85rem' }}
+                >
+                  Parcelado
+                </button>
+              </div>
+
+              {tipoCredito === 'parcelado' && (
+                <label style={{ fontSize: '0.85rem', color: 'var(--cor-texto-suave)' }}>
+                  Número de parcelas
+                  <input
+                    type="number"
+                    min="2"
+                    max="24"
+                    value={numParcelas}
+                    onChange={(e) => setNumParcelas(parseInt(e.target.value, 10) || 2)}
+                    style={{ display: 'block', width: '100%', marginTop: 4, background: 'var(--cor-fundo-elevado)', border: '1px solid var(--cor-borda)', borderRadius: 'var(--raio)', padding: '8px 10px', color: 'var(--cor-texto)' }}
+                  />
+                </label>
+              )}
+
+              <label style={{ fontSize: '0.85rem', color: 'var(--cor-texto-suave)' }}>
+                {tipoCredito === 'fiado' ? 'Vencimento' : 'Vencimento da 1ª parcela'}
+                <input
+                  type="date"
+                  value={dataPrimeiraParcela}
+                  onChange={(e) => setDataPrimeiraParcela(e.target.value)}
+                  style={{ display: 'block', width: '100%', marginTop: 4, background: 'var(--cor-fundo-elevado)', border: '1px solid var(--cor-borda)', borderRadius: 'var(--raio)', padding: '8px 10px', color: 'var(--cor-texto)' }}
+                />
+              </label>
+
+              <p style={{ fontSize: '0.85rem', color: 'var(--cor-texto-suave)' }}>
+                {tipoCredito === 'fiado' ? '1 parcela de' : `${numParcelas}x de`} R$ {valorParcela.toFixed(2)}
+              </p>
+            </div>
+          )}
+
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem' }}>
             <strong>Total</strong>
             <strong style={{ color: 'var(--cor-dourado)' }}>R$ {total.toFixed(2)}</strong>
           </div>
+
           <button className="botao" onClick={finalizarVenda} disabled={finalizando}>
-            {finalizando ? 'Registrando...' : 'Finalizar venda (à vista)'}
+            {finalizando ? 'Registrando...' : 'Finalizar venda'}
           </button>
-          <p style={{ color: 'var(--cor-texto-suave)', fontSize: '0.8rem', textAlign: 'center' }}>
-            Venda parcelada/crediário chega na próxima fase.
-          </p>
         </>
       )}
     </div>
