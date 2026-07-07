@@ -116,7 +116,7 @@ export default function NovaVenda({ lojaId, produtos, onVendaFinalizada, onFecha
     try {
       const itens = carrinho.map((item) => ({
         produto_id: item.produto.id,
-        variacao_id: item.variacao?.id || null,
+        variacao_id: item.variacao?.id || '',
         quantidade: item.quantidade,
         preco_unitario: item.produto.preco,
       }))
