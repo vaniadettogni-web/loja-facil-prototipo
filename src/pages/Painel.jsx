@@ -6,6 +6,7 @@ import FormularioProduto from '../components/FormularioProduto'
 import EditarProduto from '../components/EditarProduto'
 import ListaProdutos from '../components/ListaProdutos'
 import NovaVenda from '../components/NovaVenda'
+import ListaClientes from '../components/ListaClientes'
 
 export default function Painel() {
   const { loja, carregando: carregandoLoja } = useLoja()
@@ -13,6 +14,7 @@ export default function Painel() {
   const [busca, setBusca] = useState('')
   const [produtoEditando, setProdutoEditando] = useState(null)
   const [mostrarVenda, setMostrarVenda] = useState(false)
+  const [aba, setAba] = useState('produtos')
 
   const carregarProdutos = useCallback(async () => {
     if (!loja) return
@@ -64,6 +66,21 @@ export default function Painel() {
       </header>
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 32, padding: '32px 16px' }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => setAba('produtos')}
+            style={{ padding: '8px 20px', borderRadius: 'var(--raio)', cursor: 'pointer', border: aba === 'produtos' ? '1px solid var(--cor-dourado)' : '1px solid var(--cor-borda)', background: aba === 'produtos' ? 'var(--cor-dourado-suave)' : 'transparent', color: 'var(--cor-texto)' }}
+          >
+            Produtos
+          </button>
+          <button
+            onClick={() => setAba('clientes')}
+            style={{ padding: '8px 20px', borderRadius: 'var(--raio)', cursor: 'pointer', border: aba === 'clientes' ? '1px solid var(--cor-dourado)' : '1px solid var(--cor-borda)', background: aba === 'clientes' ? 'var(--cor-dourado-suave)' : 'transparent', color: 'var(--cor-texto)' }}
+          >
+            Clientes
+          </button>
+        </div>
+
         {mostrarVenda && (
           <NovaVenda
             lojaId={loja.id}
@@ -73,28 +90,34 @@ export default function Painel() {
           />
         )}
 
-        {produtoEditando ? (
-          <EditarProduto
-            produto={produtoEditando}
-            onSalvo={() => { setProdutoEditando(null); carregarProdutos() }}
-            onCancelar={() => setProdutoEditando(null)}
-          />
+        {aba === 'clientes' ? (
+          <ListaClientes lojaId={loja.id} />
         ) : (
-          <FormularioProduto lojaId={loja?.id} onProdutoCriado={carregarProdutos} />
+          <>
+            {produtoEditando ? (
+              <EditarProduto
+                produto={produtoEditando}
+                onSalvo={() => { setProdutoEditando(null); carregarProdutos() }}
+                onCancelar={() => setProdutoEditando(null)}
+              />
+            ) : (
+              <FormularioProduto lojaId={loja?.id} onProdutoCriado={carregarProdutos} />
+            )}
+
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+              <h2 style={{ fontSize: '1.3rem', color: 'var(--cor-texto-suave)' }}>Produtos cadastrados</h2>
+
+              <input
+                placeholder="Buscar por nome ou categoria..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                style={{ width: '100%', maxWidth: 400, background: 'var(--cor-fundo-elevado)', border: '1px solid var(--cor-borda)', borderRadius: 'var(--raio)', padding: '10px 14px', color: 'var(--cor-texto)' }}
+              />
+
+              <ListaProdutos produtos={produtosFiltrados} onExcluir={excluirProduto} onEditar={setProdutoEditando} />
+            </div>
+          </>
         )}
-
-        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-          <h2 style={{ fontSize: '1.3rem', color: 'var(--cor-texto-suave)' }}>Produtos cadastrados</h2>
-
-          <input
-            placeholder="Buscar por nome ou categoria..."
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            style={{ width: '100%', maxWidth: 400, background: 'var(--cor-fundo-elevado)', border: '1px solid var(--cor-borda)', borderRadius: 'var(--raio)', padding: '10px 14px', color: 'var(--cor-texto)' }}
-          />
-
-          <ListaProdutos produtos={produtosFiltrados} onExcluir={excluirProduto} onEditar={setProdutoEditando} />
-        </div>
       </main>
 
       <RodapeMarca />
