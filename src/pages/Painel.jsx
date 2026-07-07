@@ -7,6 +7,7 @@ import EditarProduto from '../components/EditarProduto'
 import ListaProdutos from '../components/ListaProdutos'
 import NovaVenda from '../components/NovaVenda'
 import ListaClientes from '../components/ListaClientes'
+import VendasRecentes from '../components/VendasRecentes'
 
 export default function Painel() {
   const { loja, carregando: carregandoLoja } = useLoja()
@@ -79,6 +80,12 @@ export default function Painel() {
           >
             Clientes
           </button>
+          <button
+            onClick={() => setAba('vendas')}
+            style={{ padding: '8px 20px', borderRadius: 'var(--raio)', cursor: 'pointer', border: aba === 'vendas' ? '1px solid var(--cor-dourado)' : '1px solid var(--cor-borda)', background: aba === 'vendas' ? 'var(--cor-dourado-suave)' : 'transparent', color: 'var(--cor-texto)' }}
+          >
+            Vendas
+          </button>
         </div>
 
         {mostrarVenda && (
@@ -92,6 +99,8 @@ export default function Painel() {
 
         {aba === 'clientes' ? (
           <ListaClientes lojaId={loja.id} />
+        ) : aba === 'vendas' ? (
+          <VendasRecentes lojaId={loja.id} onAtualizado={carregarProdutos} />
         ) : (
           <>
             {produtoEditando ? (
