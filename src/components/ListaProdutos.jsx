@@ -1,10 +1,12 @@
 import { useState } from 'react'
 
-export default function ListaProdutos({ produtos, onExcluir }) {
+const LIMITE_ESTOQUE_BAIXO = 3
+
+export default function ListaProdutos({ produtos, onExcluir, onEditar }) {
   const [expandido, setExpandido] = useState(null)
 
   if (produtos.length === 0) {
-    return <p style={{ color: 'var(--cor-texto-suave)' }}>Nenhum produto cadastrado ainda.</p>
+    return <p style={{ color: 'var(--cor-texto-suave)' }}>Nenhum produto encontrado.</p>
   }
 
   return (
@@ -12,9 +14,22 @@ export default function ListaProdutos({ produtos, onExcluir }) {
       {produtos.map((produto) => {
         const variacoes = produto.produto_variacoes || []
         const aberto = expandido === produto.id
+        const estoqueBaixo = produto.estoque > 0 && produto.estoque <= LIMITE_ESTOQUE_BAIXO
+        const semEstoque = produto.estoque <= 0
 
         return (
-          <div key={produto.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div key={produto.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8, position: 'relative' }}>
+            {(estoqueBaixo || semEstoque) && (
+              <span style={{
+                position: 'absolute', top: 8, right: 8,
+                background: semEstoque ? 'var(--cor-erro)' : 'var(--cor-alerta)',
+                color: '#0A0A0A', fontSize: '0.7rem', fontWeight: 600,
+                padding: '3px 8px', borderRadius: 20,
+              }}>
+                {semEstoque ? 'Sem estoque' : 'Estoque baixo'}
+              </span>
+            )}
+
             {produto.foto_url ? (
               <img src={produto.foto_url} alt={produto.nome} style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: 8 }} />
             ) : (
@@ -46,12 +61,20 @@ export default function ListaProdutos({ produtos, onExcluir }) {
               </div>
             )}
 
-            <button
-              onClick={() => onExcluir(produto.id)}
-              style={{ background: 'transparent', border: '1px solid var(--cor-erro)', color: 'var(--cor-erro)', borderRadius: 'var(--raio)', padding: '6px 10px', cursor: 'pointer' }}
-            >
-              Excluir
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => onEditar(produto)}
+                style={{ flex: 1, background: 'transparent', border: '1px solid var(--cor-dourado)', color: 'var(--cor-dourado)', borderRadius: 'var(--raio)', padding: '6px 10px', cursor: 'pointer' }}
+              >
+                Editar
+              </button>
+              <button
+                onClick={() => onExcluir(produto.id)}
+                style={{ flex: 1, background: 'transparent', border: '1px solid var(--cor-erro)', color: 'var(--cor-erro)', borderRadius: 'var(--raio)', padding: '6px 10px', cursor: 'pointer' }}
+              >
+                Excluir
+              </button>
+            </div>
           </div>
         )
       })}
