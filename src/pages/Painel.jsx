@@ -13,7 +13,7 @@ export default function Painel() {
     if (!loja) return
     const { data } = await supabase
       .from('produtos')
-      .select('*')
+      .select('*, produto_variacoes(*)')
       .eq('loja_id', loja.id)
       .order('criado_em', { ascending: false })
     setProdutos(data || [])
