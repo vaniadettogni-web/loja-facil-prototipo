@@ -1,0 +1,81 @@
+:root {
+  /* Paleta */
+  --cor-fundo: #0A0A0A;
+  --cor-fundo-elevado: #161513;
+  --cor-borda: #2A2622;
+  --cor-dourado: #C9A96E;
+  --cor-dourado-suave: #C9A96E33;
+  --cor-texto: #F2EFEA;
+  --cor-texto-suave: #A8A199;
+  --cor-sucesso: #7FA37F;
+  --cor-alerta: #C97E4E;
+  --cor-erro: #B85C5C;
+
+  /* Tipografia */
+  --fonte-display: 'Cormorant Garamond', serif;
+  --fonte-texto: 'Inter', sans-serif;
+
+  /* Espaçamento */
+  --espaco-xs: 8px;
+  --espaco-sm: 16px;
+  --espaco-md: 24px;
+  --espaco-lg: 40px;
+  --espaco-xl: 64px;
+
+  --raio: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+  font-family: var(--fonte-texto);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--fonte-display);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+
+a {
+  color: var(--cor-dourado);
+  text-decoration: none;
+}
+
+.card {
+  background: var(--cor-fundo-elevado);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  padding: var(--espaco-md);
+}
+
+.botao {
+  background: var(--cor-dourado);
+  color: #0A0A0A;
+  border: none;
+  border-radius: var(--raio);
+  padding: 10px 20px;
+  font-family: var(--fonte-texto);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.botao:hover {
+  opacity: 0.9;
+}
+
+.rodape-marca {
+  text-align: center;
+  padding: var(--espaco-lg) var(--espaco-md);
+  color: var(--cor-texto-suave);
+  font-family: var(--fonte-display);
+  font-size: 1.05rem;
+  border-top: 1px solid var(--cor-borda);
+}
