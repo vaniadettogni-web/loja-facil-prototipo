@@ -10,7 +10,7 @@ export default function ListaClientes({ lojaId }) {
   async function carregarClientes() {
     const { data } = await supabase
       .from('clientes')
-      .select('*, crediario_parcelas(valor, status)')
+      .select('*, crediario_parcelas(valor, valor_pago, status)')
       .eq('loja_id', lojaId)
       .order('nome', { ascending: true })
     setClientes(data || [])
@@ -31,7 +31,7 @@ export default function ListaClientes({ lojaId }) {
   function devendoDoCliente(cliente) {
     return (cliente.crediario_parcelas || [])
       .filter((p) => p.status !== 'pago')
-      .reduce((soma, p) => soma + Number(p.valor), 0)
+      .reduce((soma, p) => soma + (Number(p.valor) - Number(p.valor_pago)), 0)
   }
 
   return (
@@ -46,6 +46,7 @@ export default function ListaClientes({ lojaId }) {
       {clienteAberto && (
         <FichaCliente
           cliente={clienteAberto}
+          lojaId={lojaId}
           onFechar={() => setClienteAberto(null)}
           onAtualizado={carregarClientes}
         />
