@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
 import { supabase } from '../lib/supabaseClient'
 import SeletorCliente from './SeletorCliente'
+import BuscaProduto from './BuscaProduto'
 
 export default function NovaVenda({ lojaId, produtos, onVendaFinalizada, onFechar }) {
   const [escaneando, setEscaneando] = useState(false)
@@ -10,12 +11,13 @@ export default function NovaVenda({ lojaId, produtos, onVendaFinalizada, onFecha
   const [mensagem, setMensagem] = useState('')
   const [finalizando, setFinalizando] = useState(false)
   const [codigoManual, setCodigoManual] = useState('')
+  const [produtoEscolhendoTamanhoCodigo, setProdutoEscolhendoTamanhoCodigo] = useState(null)
   const leitorRef = useRef(null)
   const containerId = 'leitor-camera'
 
   const [formaPagamento, setFormaPagamento] = useState('a_vista')
   const [clienteSelecionado, setClienteSelecionado] = useState(null)
-  const [tipoCredito, setTipoCredito] = useState('fiado') // 'fiado' | 'parcelado'
+  const [tipoCredito, setTipoCredito] = useState('fiado')
   const [numParcelas, setNumParcelas] = useState(2)
   const [dataPrimeiraParcela, setDataPrimeiraParcela] = useState(() => {
     const hoje = new Date()
@@ -35,7 +37,21 @@ export default function NovaVenda({ lojaId, produtos, onVendaFinalizada, onFecha
     return produtos.find((p) => p.codigo_barras && p.codigo_barras === codigo)
   }
 
+  function estoqueDisponivelNoCarrinho(produto, variacao) {
+    const totalDisponivel = variacao ? variacao.quantidade : produto.estoque
+    const jaNoCarrinho = carrinho
+      .filter((i) => i.produto.id === produto.id && i.variacao?.id === variacao?.id)
+      .reduce((soma, i) => soma + i.quantidade, 0)
+    return totalDisponivel - jaNoCarrinho
+  }
+
   function adicionarAoCarrinho(produto, variacao) {
+    const disponivel = estoqueDisponivelNoCarrinho(produto, variacao)
+    if (disponivel <= 0) {
+      setErro(`Sem estoque disponível para ${produto.nome}${variacao ? ` (${variacao.tamanho})` : ''}.`)
+      return
+    }
+
     const itemExistente = carrinho.find(
       (i) => i.produto.id === produto.id && i.variacao?.id === variacao?.id
     )
@@ -44,6 +60,7 @@ export default function NovaVenda({ lojaId, produtos, onVendaFinalizada, onFecha
     } else {
       setCarrinho([...carrinho, { produto, variacao, quantidade: 1 }])
     }
+    setErro('')
     setMensagem(`${produto.nome} adicionado`)
   }
 
@@ -55,7 +72,11 @@ export default function NovaVenda({ lojaId, produtos, onVendaFinalizada, onFecha
     }
     setErro('')
     const variacoes = produto.produto_variacoes || []
-    adicionarAoCarrinho(produto, variacoes.length > 0 ? variacoes[0] : null)
+    if (variacoes.length > 1) {
+      setProdutoEscolhendoTamanhoCodigo(produto)
+    } else {
+      adicionarAoCarrinho(produto, variacoes[0] || null)
+    }
   }
 
   async function iniciarCamera() {
@@ -93,7 +114,19 @@ export default function NovaVenda({ lojaId, produtos, onVendaFinalizada, onFecha
   }
 
   function alterarQuantidade(index, delta) {
-    setCarrinho(carrinho.map((item, i) => (i === index ? { ...item, quantidade: Math.max(1, item.quantidade + delta) } : item)))
+    setCarrinho(
+      carrinho.map((item, i) => {
+        if (i !== index) return item
+        if (delta > 0) {
+          const disponivel = estoqueDisponivelNoCarrinho(item.produto, item.variacao)
+          if (disponivel <= 0) {
+            setErro(`Sem mais estoque disponível para ${item.produto.nome}${item.variacao ? ` (${item.variacao.tamanho})` : ''}.`)
+            return item
+          }
+        }
+        return { ...item, quantidade: Math.max(1, item.quantidade + delta) }
+      })
+    )
   }
 
   function removerDoCarrinho(index) {
@@ -156,6 +189,10 @@ export default function NovaVenda({ lojaId, produtos, onVendaFinalizada, onFecha
         <button onClick={onFechar} style={{ background: 'transparent', border: 'none', color: 'var(--cor-texto-suave)', cursor: 'pointer', fontSize: '1.2rem' }}>×</button>
       </div>
 
+      <BuscaProduto produtos={produtos} onAdicionar={adicionarAoCarrinho} />
+
+      <div style={{ textAlign: 'center', color: 'var(--cor-texto-suave)', fontSize: '0.85rem' }}>ou</div>
+
       {!escaneando ? (
         <button className="botao" onClick={iniciarCamera}>📷 Ler código de barras</button>
       ) : (
@@ -176,6 +213,24 @@ export default function NovaVenda({ lojaId, produtos, onVendaFinalizada, onFecha
         />
         <button type="submit" className="botao">Add</button>
       </form>
+
+      {produtoEscolhendoTamanhoCodigo && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: 'var(--cor-fundo)', padding: 12, borderRadius: 'var(--raio)' }}>
+          <strong>{produtoEscolhendoTamanhoCodigo.nome} — escolha o tamanho</strong>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {produtoEscolhendoTamanhoCodigo.produto_variacoes.map((v) => (
+              <button
+                key={v.id}
+                onClick={() => { adicionarAoCarrinho(produtoEscolhendoTamanhoCodigo, v); setProdutoEscolhendoTamanhoCodigo(null) }}
+                disabled={v.quantidade <= 0}
+                style={{ padding: '8px 14px', borderRadius: 'var(--raio)', border: '1px solid var(--cor-borda)', background: 'var(--cor-fundo-elevado)', color: v.quantidade > 0 ? 'var(--cor-texto)' : 'var(--cor-erro)', cursor: v.quantidade > 0 ? 'pointer' : 'not-allowed', opacity: v.quantidade > 0 ? 1 : 0.5 }}
+              >
+                {v.tamanho} {v.quantidade <= 0 ? '(sem estoque)' : `(${v.quantidade})`}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {mensagem && <p style={{ color: 'var(--cor-sucesso)', fontSize: '0.85rem' }}>{mensagem}</p>}
       {erro && <p style={{ color: 'var(--cor-erro)', fontSize: '0.85rem' }}>{erro}</p>}
