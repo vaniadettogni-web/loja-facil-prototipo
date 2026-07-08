@@ -8,6 +8,10 @@ import ListaProdutos from '../components/ListaProdutos'
 import NovaVenda from '../components/NovaVenda'
 import ListaClientes from '../components/ListaClientes'
 import VendasRecentes from '../components/VendasRecentes'
+import PainelFinanceiro from '../components/PainelFinanceiro'
+import ContasPagar from '../components/ContasPagar'
+import ContasReceber from '../components/ContasReceber'
+import RelatorioFinanceiro from '../components/RelatorioFinanceiro'
 
 export default function Painel() {
   const { loja, carregando: carregandoLoja } = useLoja()
@@ -16,6 +20,7 @@ export default function Painel() {
   const [produtoEditando, setProdutoEditando] = useState(null)
   const [mostrarVenda, setMostrarVenda] = useState(false)
   const [aba, setAba] = useState('produtos')
+  const [subAbaFinanceiro, setSubAbaFinanceiro] = useState('resumo')
 
   const carregarProdutos = useCallback(async () => {
     if (!loja) return
@@ -86,6 +91,12 @@ export default function Painel() {
           >
             Vendas
           </button>
+          <button
+            onClick={() => setAba('financeiro')}
+            style={{ padding: '8px 20px', borderRadius: 'var(--raio)', cursor: 'pointer', border: aba === 'financeiro' ? '1px solid var(--cor-dourado)' : '1px solid var(--cor-borda)', background: aba === 'financeiro' ? 'var(--cor-dourado-suave)' : 'transparent', color: 'var(--cor-texto)' }}
+          >
+            Financeiro
+          </button>
         </div>
 
         {mostrarVenda && (
@@ -101,6 +112,30 @@ export default function Painel() {
           <ListaClientes lojaId={loja.id} />
         ) : aba === 'vendas' ? (
           <VendasRecentes lojaId={loja.id} onAtualizado={carregarProdutos} />
+        ) : aba === 'financeiro' ? (
+          <>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+              {[
+                ['resumo', 'Resumo'],
+                ['pagar', 'Contas a pagar'],
+                ['receber', 'Contas a receber'],
+                ['relatorio', 'Relatório'],
+              ].map(([valor, rotulo]) => (
+                <button
+                  key={valor}
+                  onClick={() => setSubAbaFinanceiro(valor)}
+                  style={{ padding: '6px 14px', borderRadius: 'var(--raio)', cursor: 'pointer', fontSize: '0.9rem', border: subAbaFinanceiro === valor ? '1px solid var(--cor-dourado)' : '1px solid var(--cor-borda)', background: subAbaFinanceiro === valor ? 'var(--cor-dourado-suave)' : 'transparent', color: 'var(--cor-texto)' }}
+                >
+                  {rotulo}
+                </button>
+              ))}
+            </div>
+
+            {subAbaFinanceiro === 'resumo' && <PainelFinanceiro lojaId={loja.id} />}
+            {subAbaFinanceiro === 'pagar' && <ContasPagar lojaId={loja.id} />}
+            {subAbaFinanceiro === 'receber' && <ContasReceber lojaId={loja.id} />}
+            {subAbaFinanceiro === 'relatorio' && <RelatorioFinanceiro lojaId={loja.id} />}
+          </>
         ) : (
           <>
             {produtoEditando ? (
